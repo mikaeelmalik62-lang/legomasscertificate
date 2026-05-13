@@ -163,6 +163,8 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);
 .presented-block::before{content:'';position:absolute;top:-12px;left:50%;transform:translateX(-50%);width:22px;height:11px;border-radius:50% 50% 0 0 / 100% 100% 0 0;border:3px solid;border-bottom:none;}
 .presented-label{font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;}
 .lego-text-name{display:flex;justify-content:center;align-items:center;gap:3px;margin:4px 0 2px;width:100%;overflow:hidden;}
+/* Empty space where bricks would go — leaves room for sharpie fill-in */
+.blank-name-line{width:70%;height:50px;}
 .lego-letter{display:inline-flex;flex-direction:column;align-items:center;justify-content:flex-end;border-radius:4px;border:2.5px solid;position:relative;font-family:'Fredoka One',cursive;padding-bottom:3px;flex-shrink:0;}
 .lego-letter .stud{position:absolute;top:-8px;left:50%;transform:translateX(-50%);border-radius:50% 50% 0 0 / 100% 100% 0 0;border:2.5px solid;border-bottom:none;}
 .brick-xl{width:46px;height:54px;font-size:22px;} .brick-xl .stud{width:16px;height:9px;}
@@ -765,6 +767,15 @@ function updateMiniBricks(){
 function sizeClass(n){if(n<=6)return 'brick-xl';if(n<=9)return 'brick-lg';if(n<=13)return 'brick-md';if(n<=17)return 'brick-sm';return 'brick-xs';}
 function buildNameBricks(name, targetEl){
   const c=targetEl||document.getElementById('name-bricks');c.innerHTML='';
+  // Sharpie-fill-in mode: if no name is set and the placement is 1st/2nd/3rd,
+  // leave a horizontal line so winner certs can be printed pre-event.
+  if(!name){
+    const p=(document.getElementById('placement-input').value||'').trim().toLowerCase();
+    if(['1st','2nd','3rd','1','2','3'].includes(p)){
+      c.innerHTML='<div class="blank-name-line"></div>';
+      return;
+    }
+  }
   const th=THEMES[currentTheme],letters=(name||'YOUR NAME').toUpperCase().split('');
   const nonSp=letters.filter(l=>l!==' ').length,sz=sizeClass(nonSp);
   const spW={'brick-xl':10,'brick-lg':9,'brick-md':7,'brick-sm':6,'brick-xs':4};
@@ -783,7 +794,8 @@ function buildNameBricks(name, targetEl){
 function updatePlacement(val){
   const badge=document.getElementById('placement-badge'),numEl=document.getElementById('placement-num');
   const v=val.trim();
-  if(!v){badge.style.display='none';return;}
+  const refreshName=()=>{const ni=document.getElementById('name-input');if(ni)buildNameBricks(ni.value);};
+  if(!v){badge.style.display='none';refreshName();return;}
   numEl.textContent=v.toUpperCase();
   badge.className='placement-badge';
   const lv=v.toLowerCase();
@@ -792,6 +804,7 @@ function updatePlacement(val){
   else if(lv==='3rd'||lv==='3')badge.classList.add('bronze');
   else badge.classList.add('other');
   badge.style.display='flex';
+  refreshName();
 }
 
 function updateStats(){
@@ -813,11 +826,34 @@ function toggleSparkles(on){document.getElementById('sparkle-wrap').style.displa
 function toggleMiniBricks(on){document.getElementById('mini-bricks-row').style.display=on?'flex':'none';}
 
 function applyPreset(type){
-  const pi=document.getElementById('placement-input'),ti=document.getElementById('title-input'),di=document.getElementById('desc-input');
-  if(type==='1st'){pi.value='1st';updatePlacement('1st');markFilled(pi);if(!ti.value)document.getElementById('cert-title').textContent='Speed Build Champion';}
-  else if(type==='2nd'){pi.value='2nd';updatePlacement('2nd');markFilled(pi);}
-  else if(type==='3rd'){pi.value='3rd';updatePlacement('3rd');markFilled(pi);}
-  else{pi.value='';updatePlacement('');pi.classList.remove('filled');if(!ti.value)document.getElementById('cert-title').textContent='Certificate of Participation';if(!di.value)document.getElementById('desc-text').innerHTML='For taking part in the LEGO Speed Build Challenge with fantastic enthusiasm and effort! 🧱⭐';}
+  const pi=document.getElementById('placement-input'),ti=document.getElementById('title-input'),di=document.getElementById('desc-input'),ni=document.getElementById('name-input');
+  // Winner presets (1/2/3): we don't yet know who won, so clear the name field.
+  // updatePlacement() will redraw the name area as a blank sharpie-fill-in line.
+  const clearWinnerName=()=>{
+    ni.value='';ni.classList.remove('filled');
+    updateCharCount('','name-chars',24);
+  };
+  if(type==='1st'){
+    pi.value='1st';markFilled(pi);
+    if(!ti.value)document.getElementById('cert-title').textContent='Speed Build Champion';
+    clearWinnerName();updatePlacement('1st');
+  }
+  else if(type==='2nd'){
+    pi.value='2nd';markFilled(pi);
+    if(!ti.value)document.getElementById('cert-title').textContent='Speed Build Runner-Up';
+    clearWinnerName();updatePlacement('2nd');
+  }
+  else if(type==='3rd'){
+    pi.value='3rd';markFilled(pi);
+    if(!ti.value)document.getElementById('cert-title').textContent='Speed Build — 3rd Place';
+    clearWinnerName();updatePlacement('3rd');
+  }
+  else{
+    pi.value='';pi.classList.remove('filled');
+    if(!ti.value)document.getElementById('cert-title').textContent='Certificate of Participation';
+    if(!di.value)document.getElementById('desc-text').innerHTML='For taking part in the LEGO Speed Build Challenge with fantastic enthusiasm and effort! 🧱⭐';
+    updatePlacement('');
+  }
   checkReady();
 }
 
